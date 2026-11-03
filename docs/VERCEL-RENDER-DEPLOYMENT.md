@@ -6,4 +6,4 @@ Set `VITE_DEMO_MODE=false` and `VITE_API_URL=/api` in Vercel environment variabl
 
 Deploy the existing API to Render with start command `npm run start`. Set `NODE_ENV=production`, `MONGO_URI`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CLIENT_ORIGIN=https://agar-events.vercel.app`, and `TRUST_PROXY=1`. Render supplies `PORT`; do not set a fixed production port.
 
-Render local uploads are ephemeral; use persistent object storage or a paid persistent disk before relying on uploaded files in production.
+Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` only in Render. With those variables set, new admin image uploads are persisted in Cloudinary and their HTTPS URLs are stored in MongoDB. Legacy `/uploads/...` references remain unchanged; reupload any that are already missing. Render local uploads are only a development fallback.

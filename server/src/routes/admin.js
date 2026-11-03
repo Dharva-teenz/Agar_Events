@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { Service,Event,Review,Enquiry,Settings,FAQ } from '../models.js';
 import { requireAdmin,requireCSRF } from '../middleware/auth.js';
 import { uploadDir } from '../config.js';
+import { cloudinaryEnabled,uploadImage } from '../media-storage.js';
 import { getSettings } from './public.js';
 import { id,InputError,parseService,parseEvent,parseSettings,parseStatus,parseFAQ } from '../../../shared/validation.js';
 export const adminRouter=Router();adminRouter.use(requireAdmin,requireCSRF);
@@ -76,9 +77,11 @@ const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:8*1024*1024
 }});
 adminRouter.post('/uploads',upload.single('image'),async(req,res)=>{
   if(!req.file)throw new InputError('Choose an image to upload.');
-  await mkdir(uploadDir,{recursive:true});const filename=`${randomUUID()}.webp`;
+  let image;
   try{
-    await sharp(req.file.buffer,{limitInputPixels:40000000,animated:false}).rotate().resize({width:2200,height:2200,fit:'inside',withoutEnlargement:true}).webp({quality:86}).toFile(path.join(uploadDir,filename));
+    image=await sharp(req.file.buffer,{limitInputPixels:40000000,animated:false}).rotate().resize({width:2200,height:2200,fit:'inside',withoutEnlargement:true}).webp({quality:86}).toBuffer();
   }catch{throw new InputError('Image cannot be processed. Choose a valid image below 8 MB and 40 megapixels.');}
-  res.status(201).json({url:`/uploads/${filename}`});
+  if(cloudinaryEnabled){try{return res.status(201).json(await uploadImage(image));}catch{throw new InputError('Image upload to Cloudinary failed. Please try again.');}}
+  await mkdir(uploadDir,{recursive:true});const filename=`${randomUUID()}.webp`;await sharp(image).toFile(path.join(uploadDir,filename));
+  return res.status(201).json({url:`/uploads/${filename}`});
 });
