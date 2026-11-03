@@ -1,5 +1,7 @@
 export const DESIGN_MODE=import.meta.env.VITE_DEMO_MODE==='true';
 const ROOT=(import.meta.env.VITE_API_URL||'/api').replace(/\/$/,'');
+const API_ORIGIN=/^https?:\/\//i.test(ROOT)?new URL(ROOT).origin:'';
+export function mediaURL(value){return value?.startsWith('/uploads/')&&API_ORIGIN?API_ORIGIN+value:value;}
 let csrf='';
 export function setCSRF(value){csrf=value||'';}
 export class APIError extends Error{constructor(message,status){super(message);this.name='APIError';this.status=status;}}

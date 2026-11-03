@@ -3,7 +3,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { Admin } from '../models.js';
 import { config } from '../config.js';
 export const cookieName='agar_session';
-export const cookieOptions=()=>({httpOnly:true,secure:config.production,sameSite:'strict',path:'/api',maxAge:8*60*60*1000});
+export const cookieOptions=()=>({httpOnly:true,secure:config.production,sameSite:config.production?'none':'strict',path:'/api',maxAge:8*60*60*1000});
 export async function requireAdmin(req,res,next){
   try {
     const token=req.cookies[cookieName];
