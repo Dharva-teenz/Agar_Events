@@ -1,0 +1,5 @@
+import React from 'react';
+import {PageIntro} from '../components/Layout.jsx';
+import {AboutSection,WhySection} from './Home.jsx';
+import {Button,SectionTitle} from '../components/UI.jsx';
+export default function About(){return <><PageIntro eyebrow="ABOUT AGAR EVENTS" title="Your moments." accent="Our creations." description="Thoughtful celebrations, beautiful details and a little Agar magic. Based in Trichy."/><AboutSection expanded/><WhySection/><section className="section"><div className="container"><SectionTitle eyebrow="FROM THE FIRST HELLO" title="A simple start to something special."/><div className="process-grid">{[['01','Tell us your story','Share the occasion, date, location and the ideas you have in mind.'],['02','Explore the details','Discuss the style, scope and practical arrangements with the team.'],['03','Make it a celebration','Confirm your plan directly with the team before making any commitments.']].map(([n,title,description])=><div key={n}><span>{n}</span><h3>{title}</h3><p>{description}</p></div>)}</div><Button to="/contact" arrow>Start a Conversation</Button></div></section></>;}

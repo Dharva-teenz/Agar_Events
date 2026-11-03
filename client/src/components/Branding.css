@@ -1,0 +1,11 @@
+.logo img{display:block;height:58px;width:auto;max-width:140px;object-fit:contain;background:transparent;border:0;box-shadow:none;padding:0}
+.brand-lockup{display:inline-flex;align-items:center;gap:11px;min-width:0;color:#fff;line-height:1;text-align:left}
+.brand-lockup img{display:block;height:50px;width:auto;max-width:52px;object-fit:contain;flex-shrink:0;background:transparent;border:0;box-shadow:none;padding:0}
+.brand-lockup-copy{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.brand-lockup-copy strong{font-size:18px;line-height:1;letter-spacing:.035em;font-weight:var(--weight-logo);white-space:nowrap}
+.brand-lockup-copy small{font-size:8px;line-height:1;letter-spacing:.24em;text-transform:uppercase;color:#e6cb95;font-weight:var(--weight-medium);white-space:nowrap}
+.footer-brand{display:flex;align-items:center;margin-bottom:16px}
+.brand-lockup-footer img{height:50px;max-width:52px}
+.brand-lockup-footer .brand-lockup-copy strong{font-size:19px}
+@media(max-width:960px){.logo img{height:54px}}
+@media(max-width:760px){.logo img{height:46px;max-width:110px}.brand-lockup{gap:9px}.brand-lockup img,.brand-lockup-footer img{height:46px;max-width:48px}.brand-lockup-copy{gap:4px}.brand-lockup-copy strong,.brand-lockup-footer .brand-lockup-copy strong{font-size:16px}.brand-lockup-copy small{font-size:7px;letter-spacing:.21em}}

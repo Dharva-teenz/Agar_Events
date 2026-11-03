@@ -1,0 +1,25 @@
+{
+  "name": "@agar/server",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "seed": "node src/seed.js",
+    "setup": "node ../scripts/setup.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "mongoose": "^8.19.1",
+    "helmet": "^8.1.0",
+    "cors": "^2.8.5",
+    "cookie-parser": "^1.4.7",
+    "bcryptjs": "^3.0.2",
+    "jsonwebtoken": "^9.0.2",
+    "express-rate-limit": "^7.5.1",
+    "multer": "^2.0.2",
+    "sharp": "^0.34.4",
+    "dotenv": "^16.6.1"
+  }
+}

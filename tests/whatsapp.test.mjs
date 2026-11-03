@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {buildEnquiryMessage,buildWhatsAppUrl,normalizeWhatsApp,localISODate} from '../shared/whatsapp.js';
+const input={name:'Example & Family',phone:'+91 90000 00000',eventDate:'2030-02-12',location:'Trichy',guests:150,budget:'INR 100000',message:'Gold & ivory decor\nNo fireworks'};
+test('all supplied event details are present in the message',()=>{const result=buildEnquiryMessage(input,'Wedding Events','AG-ABC123');for(const value of [...Object.values(input),'Wedding Events','AG-ABC123'])assert.ok(result.includes(String(value)));});
+test('message values are safely URL encoded',()=>{const message=buildEnquiryMessage(input,'Wedding Events');const url=buildWhatsAppUrl('919000000000',message);const parsed=new URL(url);assert.equal(parsed.hostname,'wa.me');assert.equal(parsed.searchParams.get('text'),message);});
+test('an unknown WhatsApp number never creates a fake destination',()=>assert.equal(buildWhatsAppUrl('', 'Hello'),null));
+test('invalid WhatsApp number is rejected',()=>assert.equal(buildWhatsAppUrl('12345','Hello'),null));
+test('formatted international number normalizes',()=>assert.equal(normalizeWhatsApp('+91 (90000) 00000'),'919000000000'));
+test('optional details are explained as unconfirmed',()=>{const result=buildEnquiryMessage({name:'Test',phone:'123',location:'Trichy'},'');assert.ok(result.includes('To be confirmed'));assert.ok(result.includes('To be discussed'));assert.ok(!result.includes('undefined'));});
+test('local date formatter has ISO shape',()=>assert.match(localISODate(),/^\d{4}-\d{2}-\d{2}$/));

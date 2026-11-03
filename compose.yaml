@@ -1,0 +1,34 @@
+# Local Docker setup only. Production requires HTTPS, private/authenticated MongoDB,
+# secrets management, backups, and a persistent upload volume.
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+  app:
+    build: .
+    profiles: ["full"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"
+    env_file: server/.env
+    environment:
+      NODE_ENV: development
+      MONGO_URI: mongodb://mongo:27017/agar_events
+      CLIENT_ORIGIN: http://localhost:5000,http://127.0.0.1:5000
+    volumes:
+      - event_uploads:/app/server/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+volumes:
+  mongo_data:
+  event_uploads:
