@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://agar-events-api.onrender.com/api/:path*" },
+    { "source": "/uploads/:path*", "destination": "https://agar-events-api.onrender.com/uploads/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
