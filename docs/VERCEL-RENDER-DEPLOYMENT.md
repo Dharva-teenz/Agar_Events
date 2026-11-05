@@ -4,7 +4,7 @@ Deploy from the repository root to Vercel. Leave **Root Directory** empty, use b
 
 If the Vercel project must keep **Root Directory** set to `client`, Vercel reads `client/vercel.json` instead. Keep the framework as **Vite**, use build command `npm run build`, and set **Output Directory** to `dist` (relative to `client`). The client-level rewrite file preserves the Render `/api` and legacy `/uploads` proxies and adds the SPA fallback for direct routes.
 
-Set `VITE_DEMO_MODE=false` and `VITE_API_URL=/api` in Vercel environment variables, then redeploy. Do not use the absolute Render API URL in the Vercel build: the same-origin proxy keeps admin cookies reliable and avoids browser CORS failures.
+Set `VITE_DEMO_MODE=false` and `VITE_API_URL=/api` in Vercel environment variables, then redeploy. Do not use the absolute Render API URL in the Vercel build: the same-origin proxy keeps admin cookies reliable and avoids browser CORS failures. In particular, `https://agar-events-api.onrender.com` without `/api` is invalid: it requests the backend SPA fallback at `/site` instead of the JSON API at `/api/site`.
 
 Deploy the existing API to Render with start command `npm run start`. Set `NODE_ENV=production`, `MONGO_URI`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CLIENT_ORIGIN=https://agar-events.vercel.app`, and `TRUST_PROXY=1`. Render supplies `PORT`; do not set a fixed production port.
 

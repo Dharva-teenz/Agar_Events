@@ -2,6 +2,10 @@ import React,{createContext,useCallback,useContext,useEffect,useState} from 'rea
 import {api,DESIGN_MODE} from '../lib/api.js';
 import {designSite} from '../../../shared/catalog.js';
 const Context=createContext(null);
+function validSitePayload(value){
+  return Boolean(value&&typeof value==='object'&&value.settings&&typeof value.settings==='object'
+    &&Array.isArray(value.services)&&Array.isArray(value.events)&&Array.isArray(value.reviews));
+}
 export function SiteProvider({children}){
   const [data,setData]=useState(DESIGN_MODE?designSite:null);
   const [error,setError]=useState('');
@@ -9,7 +13,11 @@ export function SiteProvider({children}){
   const refresh=useCallback(async(signal)=>{
     if(DESIGN_MODE)return;
     setLoading(true);setError('');
-    try{setData(await api('/site',{signal}));}catch(e){if(e.name!=='AbortError')setError(e.message);}finally{if(!signal?.aborted)setLoading(false);}
+    try{
+      const site=await api('/site',{signal});
+      if(!validSitePayload(site))throw new Error('The website received an invalid response from its API.');
+      setData(site);
+    }catch(e){if(e.name!=='AbortError')setError(e.message);}finally{if(!signal?.aborted)setLoading(false);}
   },[]);
   useEffect(()=>{const controller=new AbortController();refresh(controller.signal);return()=>controller.abort();},[refresh]);
   useEffect(()=>{if(DESIGN_MODE)return;const revalidate=()=>{if(document.visibilityState==='visible')refresh();};window.addEventListener('focus',revalidate);document.addEventListener('visibilitychange',revalidate);return()=>{window.removeEventListener('focus',revalidate);document.removeEventListener('visibilitychange',revalidate);};},[refresh]);

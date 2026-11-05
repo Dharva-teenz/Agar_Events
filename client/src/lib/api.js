@@ -1,5 +1,8 @@
 export const DESIGN_MODE=import.meta.env.VITE_DEMO_MODE==='true';
-const ROOT=(import.meta.env.VITE_API_URL||'/api').replace(/\/$/,'');
+const configuredRoot=(import.meta.env.VITE_API_URL||'/api').trim().replace(/\/$/,'');
+// A bare API origin is a common deployment mistake. Public API endpoints live
+// below /api, while production normally uses the same-origin /api proxy.
+const ROOT=/^https?:\/\/[^/]+$/i.test(configuredRoot)?`${configuredRoot}/api`:configuredRoot||'/api';
 const API_ORIGIN=/^https?:\/\//i.test(ROOT)?new URL(ROOT).origin:'';
 export function mediaURL(value){return value?.startsWith('/uploads/')&&API_ORIGIN?API_ORIGIN+value:value;}
 let csrf='';
