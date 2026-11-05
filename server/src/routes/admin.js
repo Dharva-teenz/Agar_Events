@@ -4,10 +4,10 @@ import sharp from 'sharp';
 import path from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { Service,Event,Review,Enquiry,Settings,FAQ } from '../models.js';
+import { Service,Event,Review,Enquiry,Settings,FAQ,MediaAsset } from '../models.js';
 import { requireAdmin,requireCSRF } from '../middleware/auth.js';
 import { uploadDir } from '../config.js';
-import { cloudinaryEnabled,uploadImage } from '../media-storage.js';
+import { cloudinaryEnabled,uploadImage,deleteCloudinaryImage } from '../media-storage.js';
 import { getSettings } from './public.js';
 import { id,InputError,parseService,parseEvent,parseSettings,parseStatus,parseFAQ } from '../../../shared/validation.js';
 export const adminRouter=Router();adminRouter.use(requireAdmin,requireCSRF);
@@ -28,6 +28,21 @@ async function updated(Model,recordId,data){
   if(!record)throw new InputError('Record not found.',404);return record;
 }
 async function existingService(serviceId){if(!await Service.exists({_id:serviceId}))throw new InputError('Selected service does not exist.');}
+function settingsContain(value,target){
+ if(value===target)return true;
+ if(Array.isArray(value))return value.some(item=>settingsContain(item,target));
+ return Boolean(value&&typeof value==='object'&&Object.values(value).some(item=>settingsContain(item,target)));
+}
+async function removeUnusedMedia(assetId,url){
+ if(!assetId||!cloudinaryEnabled)return;
+ const [service,event,settings]=await Promise.all([
+  Service.exists({$or:[{coverAssetId:assetId},{coverImage:url}]}),
+  Event.exists({$or:[{coverAssetId:assetId},{coverImage:url},{'images.assetId':assetId},{'images.url':url}]}),
+  Settings.find({}).select('value').lean()
+ ]);
+ if(service||event||settings.some(setting=>settingsContain(setting.value,url)))return;
+ try{if(await deleteCloudinaryImage(assetId))await MediaAsset.deleteOne({assetId});}catch{ /* A failed cleanup must not undo the completed record deletion. */ }
+}
 adminRouter.get('/overview',async(req,res)=>{
   const [services,events,pendingReviews,enquiries,newEnquiries,recent]=await Promise.all([
     Service.countDocuments(),Event.countDocuments(),Review.countDocuments({status:'pending'}),Enquiry.countDocuments(),
@@ -47,12 +62,13 @@ adminRouter.delete('/services/:id',async(req,res)=>{
     Enquiry.updateMany({service:serviceId},{$set:history})
   ]);
   await Service.findByIdAndDelete(serviceId);
+  await removeUnusedMedia(service.coverAssetId,service.coverImage);
   res.json({ok:true});
 });
 adminRouter.get('/events',async(req,res)=>res.json(await list(Event,req,{},'service')));
 adminRouter.post('/events',async(req,res)=>{const data=parseEvent(req.body);await existingService(data.service);res.status(201).json(await Event.create(data));});
 adminRouter.put('/events/:id',async(req,res)=>{const data=parseEvent(req.body);await existingService(data.service);res.json(await updated(Event,req.params.id,data));});
-adminRouter.delete('/events/:id',async(req,res)=>{const item=await Event.findByIdAndDelete(id(req.params.id));if(!item)throw new InputError('Event not found.',404);res.json({ok:true});});
+adminRouter.delete('/events/:id',async(req,res)=>{const item=await Event.findByIdAndDelete(id(req.params.id));if(!item)throw new InputError('Event not found.',404);const assets=[{assetId:item.coverAssetId,url:item.coverImage},...(item.images||[])];await Promise.all(assets.map(asset=>removeUnusedMedia(asset.assetId,asset.url)));res.json({ok:true});});
 adminRouter.get('/reviews',async(req,res)=>res.json(await list(Review,req,{},'service')));
 adminRouter.patch('/reviews/:id',async(req,res)=>res.json(await updated(Review,req.params.id,{status:parseStatus(req.body,['pending','approved','rejected'])})));
 adminRouter.delete('/reviews/:id',async(req,res)=>{const item=await Review.findByIdAndDelete(id(req.params.id));if(!item)throw new InputError('Review not found.',404);res.json({ok:true});});
@@ -81,7 +97,7 @@ adminRouter.post('/uploads',upload.single('image'),async(req,res)=>{
   try{
     image=await sharp(req.file.buffer,{limitInputPixels:40000000,animated:false}).rotate().resize({width:2200,height:2200,fit:'inside',withoutEnlargement:true}).webp({quality:86}).toBuffer();
   }catch{throw new InputError('Image cannot be processed. Choose a valid image below 8 MB and 40 megapixels.');}
-  if(cloudinaryEnabled){try{return res.status(201).json(await uploadImage(image));}catch{throw new InputError('Image upload to Cloudinary failed. Please try again.');}}
+  if(cloudinaryEnabled){try{const result=await uploadImage(image);await MediaAsset.updateOne({url:result.url},{$setOnInsert:{assetId:result.assetId,resourceType:'image'}},{upsert:true});return res.status(201).json(result);}catch{throw new InputError('Image upload to Cloudinary failed. Please try again.');}}
   await mkdir(uploadDir,{recursive:true});const filename=`${randomUUID()}.webp`;await sharp(image).toFile(path.join(uploadDir,filename));
   return res.status(201).json({url:`/uploads/${filename}`});
 });

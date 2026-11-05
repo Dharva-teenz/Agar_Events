@@ -3,7 +3,7 @@ import {api} from '../lib/api.js';
 import {Button,Field,Dialog,Alert} from '../components/UI.jsx';
 import {Icon} from '../components/Icon.jsx';
 import {AdminHeading,useCollection,TableState,ImageField,Status} from './Common.jsx';
-const blank=()=>({title:'',slug:'',subtitle:'',description:'',coverImage:'',icon:'rings',features:[],active:true,sortOrder:0});
+const blank=()=>({title:'',slug:'',subtitle:'',description:'',coverImage:'',coverAssetId:'',icon:'rings',features:[],active:true,sortOrder:0});
 function Editor({initial,onClose,onSaved}){
  const [draft,setDraft]=useState({...initial,featuresText:(initial.features||[]).join('\n')});const [error,setError]=useState('');const [busy,setBusy]=useState(false);
  const change=e=>setDraft(d=>({...d,[e.target.name]:e.target.type==='checkbox'?e.target.checked:e.target.value}));

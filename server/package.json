@@ -7,7 +7,8 @@
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "seed": "node src/seed.js",
-    "setup": "node ../scripts/setup.mjs"
+    "setup": "node ../scripts/setup.mjs",
+    "migrate:media": "node src/migrate-local-media.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

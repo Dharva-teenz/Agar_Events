@@ -7,3 +7,8 @@ export function uploadImage(buffer){
  if(!cloudinaryEnabled)throw new Error('Cloudinary is not configured.');
  return new Promise((resolve,reject)=>{const stream=cloudinary.uploader.upload_stream({folder:'agar-events/images',resource_type:'image'},(error,result)=>error?reject(error):resolve({url:result.secure_url,assetId:result.public_id,width:result.width,height:result.height,bytes:result.bytes}));stream.end(buffer);});
 }
+export async function deleteCloudinaryImage(assetId){
+ if(!cloudinaryEnabled||!assetId)return false;
+ const result=await cloudinary.uploader.destroy(assetId,{resource_type:'image',invalidate:true});
+ return result.result==='ok'||result.result==='not found';
+}

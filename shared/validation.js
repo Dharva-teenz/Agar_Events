@@ -88,17 +88,17 @@ export function parseService(raw) {
   const icon=text(d.icon,'Icon',1,20,'rings');
   if(!['rings','heart','gift','users','home','star','diamond','flower'].includes(icon)) fail('Choose a supported service icon.');
   return { title:text(d.title,'Service title',2,100),slug,subtitle:text(d.subtitle,'Subtitle',0,150),
-    description:text(d.description,'Description',0,3000),coverImage:imageURL(d.coverImage),icon,
+    description:text(d.description,'Description',0,3000),coverImage:imageURL(d.coverImage),coverAssetId:text(d.coverAssetId,'Cover asset ID',0,300),icon,
     features:stringArray(d.features||[],'Service features'),active:boolean(d.active,'Active',true),
     sortOrder:integer(d.sortOrder,'Display order',0,999,0) };
 }
 export function parseEvent(raw) {
   const d=object(raw);
   if(!Array.isArray(d.images) || d.images.length<1 || d.images.length>30) fail('Add between 1 and 30 event photos.');
-  const images=d.images.map(v=>{object(v); const url=imageURL(v.url);if(!url)fail('Photo URL is required.');return {url,alt:text(v.alt,'Photo description',1,200)};});
+  const images=d.images.map(v=>{object(v); const url=imageURL(v.url);if(!url)fail('Photo URL is required.');return {url,alt:text(v.alt,'Photo description',1,200),assetId:text(v.assetId,'Photo asset ID',0,300)};});
   return { service:id(d.service,'Service'),title:text(d.title,'Event title',2,120),
     description:text(d.description,'Event description',0,3000),location:text(d.location,'Location',0,160),
-    eventDate:dateOnly(d.eventDate),coverImage:imageURL(d.coverImage)||images[0].url,images,
+    eventDate:dateOnly(d.eventDate),coverImage:imageURL(d.coverImage)||images[0].url,coverAssetId:text(d.coverAssetId,'Cover asset ID',0,300),images,
     featured:boolean(d.featured,'Featured'),published:boolean(d.published,'Published',true),isDemo:boolean(d.isDemo,'Reference artwork') };
 }
 export function parseReview(raw) {
