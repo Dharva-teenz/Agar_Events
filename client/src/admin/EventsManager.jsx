@@ -4,7 +4,7 @@ import {useRoute,Link,navigate} from '../lib/router.jsx';
 import {Button,Field,Dialog,Alert} from '../components/UI.jsx';
 import {Icon} from '../components/Icon.jsx';
 import {AdminHeading,useCollection,TableState,ImageField,Status} from './Common.jsx';
-import {appendAlbumPhoto,clearAlbumCoverIfRemoved,setAlbumCover} from './eventMedia.js';
+import {appendAlbumPhoto,clearAlbumCoverIfRemoved,coverWasPersisted,setAlbumCover} from './eventMedia.js';
 
 const blank=()=>({title:'',service:'',description:'',location:'Trichy',eventDate:'',coverImage:'',coverAssetId:'',images:[],published:true,featured:false,isDemo:false});
 
@@ -21,13 +21,18 @@ function Editor({initial,services,onClose,onSaved}){
    if(file.size>8*1024*1024)throw new Error(`${file.name} is larger than 8 MB.`);
    const body=new FormData();body.append('image',file);
    const result=await api('/admin/uploads',{method:'POST',body});
-   // Extra album photos do not silently replace the chosen cover.
    setDraft(d=>appendAlbumPhoto(d,result));
   }}catch(err){setError(err.message);}finally{setUploading(false);e.target.value='';}
  }
  async function submit(e){
   e.preventDefault();setError('');if(!draft.images.length){setError('Add at least one event photo.');return;}
-  setBusy(true);try{await api(`/admin/events${initial._id?'/'+initial._id:''}`,{method:initial._id?'PUT':'POST',body:draft});onSaved();}catch(err){setError(err.message);}finally{setBusy(false);}
+  setBusy(true);
+  try{
+   const saved=await api(`/admin/events${initial._id?'/'+initial._id:''}`,{method:initial._id?'PUT':'POST',body:draft});
+   const persisted=await api(`/admin/events/${saved._id}`);
+   if(!coverWasPersisted(draft,persisted))throw new Error('The album was saved, but its cover could not be verified. Keep this editor open and try saving again.');
+   onSaved(persisted);
+  }catch(err){setError(err.message);}finally{setBusy(false);}
  }
  return <Dialog title={initial._id?'Edit event album':'Add an event album'} onClose={onClose} wide><Alert>{error}</Alert><form onSubmit={submit} className="form-grid">
   <Field label="Event title *"><input name="title" value={draft.title} onChange={change} required minLength={2} maxLength={120}/></Field>
@@ -41,14 +46,15 @@ function Editor({initial,services,onClose,onSaved}){
    <div className="add-url"><input value={newURL} onChange={e=>setNewURL(e.target.value)} placeholder="Or add an HTTPS photo URL" aria-label="New photo URL"/><Button type="button" variant="outline" disabled={!newURL||draft.images.length>=30} onClick={()=>{setDraft(d=>appendAlbumPhoto(d,{url:newURL}));setNewURL('');}}>Add URL</Button></div>
   </div>
   <div className="field-wide checkbox-row"><label className="checkbox-label"><input type="checkbox" name="published" checked={draft.published} onChange={change}/>Published</label><label className="checkbox-label"><input type="checkbox" name="featured" checked={draft.featured} onChange={change}/>Featured first</label><label className="checkbox-label"><input type="checkbox" name="isDemo" checked={draft.isDemo} onChange={change}/>Reference artwork, not real client work</label></div>
-  <p className="small-note field-wide">Only upload photos you own or have permission to publish. Obtain client permission before publishing identifiable people.</p><div className="dialog-actions field-wide"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={busy||uploading}>{busy?'Saving...':'Save Album'}</Button></div>
+  <p className="small-note field-wide">Only upload photos you own or have permission to publish. Obtain client permission before publishing identifiable people.</p><div className="dialog-actions field-wide"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={busy||uploading}>{busy?'Saving and verifying...':'Save Album'}</Button></div>
  </form></Dialog>;
 }
 
 export default function EventsManager(){
- const collection=useCollection('events');const [services,setServices]=useState([]);const [editing,setEditing]=useState(null);const [error,setError]=useState('');const [busy,setBusy]=useState('');const {query}=useRoute();
+ const collection=useCollection('events');const [services,setServices]=useState([]);const [editing,setEditing]=useState(null);const [error,setError]=useState('');const [message,setMessage]=useState('');const [busy,setBusy]=useState('');const {query}=useRoute();
  useEffect(()=>{const controller=new AbortController();api('/admin/services?limit=100',{signal:controller.signal}).then(data=>setServices(data.items)).catch(e=>{if(e.name!=='AbortError')setError(e.message);});return()=>controller.abort();},[]);
  useEffect(()=>{if(query.get('new')){setEditing(blank());navigate('/admin/events',{replace:true});}},[query]);
- async function remove(item){if(!window.confirm(`Delete the album "${item.title}"? This removes its website record, not the uploaded image files.`))return;setError('');setBusy(item._id);try{await api(`/admin/events/${item._id}`,{method:'DELETE'});collection.reload();}catch(e){setError(e.message);}finally{setBusy('');}}
- return <><AdminHeading title="Your celebrations." description="Each album belongs to one service. Customers only see that service's published events."><Button onClick={()=>setEditing(blank())}><Icon name="plus" size={18}/>Add Event</Button></AdminHeading><Alert>{error}</Alert><div className="admin-panel"><TableState collection={collection} empty="Upload your first event album."><div className="table-scroll"><table><thead><tr><th>Event album</th><th>Service</th><th>Photos</th><th>Status</th><th>Actions</th></tr></thead><tbody>{collection.items.map(event=><tr key={event._id}><td><div className="record-name"><img src={event.coverImage} alt=""/><div><strong>{event.title}</strong><small>{event.isDemo?'Reference artwork':event.location}</small></div></div></td><td>{event.service?.title||'Missing service'}</td><td>{event.images.length}</td><td><Status value={event.published?'published':'draft'}/></td><td><div className="table-actions"><Link className="icon-button" to={`/events/${event._id}`} target="_blank" aria-label={`View ${event.title}`}><Icon name="eye" size={18}/></Link><button className="icon-button" onClick={()=>setEditing(event)} aria-label={`Edit ${event.title}`}><Icon name="edit" size={18}/></button><button className="icon-button danger" disabled={busy===event._id} onClick={()=>remove(event)} aria-label={`Delete ${event.title}`}><Icon name="trash" size={18}/></button></div></td></tr>)}</tbody></table></div></TableState></div>{editing?<Editor initial={editing} services={services} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);collection.reload();}}/>:null}</>;
+ async function remove(item){if(!window.confirm(`Delete the album "${item.title}"? This removes its website record, not the uploaded image files.`))return;setError('');setMessage('');setBusy(item._id);try{await api(`/admin/events/${item._id}`,{method:'DELETE'});collection.reload();}catch(e){setError(e.message);}finally{setBusy('');}}
+ const startEditor=event=>{setError('');setMessage('');setEditing(event);};
+ return <><AdminHeading title="Your celebrations." description="Each album belongs to one service. Customers only see that service's published events."><Button onClick={()=>startEditor(blank())}><Icon name="plus" size={18}/>Add Event</Button></AdminHeading><Alert>{error}</Alert><Alert type="success">{message}</Alert><div className="admin-panel"><TableState collection={collection} empty="Upload your first event album."><div className="table-scroll"><table><thead><tr><th>Event album</th><th>Service</th><th>Photos</th><th>Status</th><th>Actions</th></tr></thead><tbody>{collection.items.map(event=><tr key={event._id}><td><div className="record-name"><img src={event.coverImage} alt=""/><div><strong>{event.title}</strong><small>{event.isDemo?'Reference artwork':event.location}</small></div></div></td><td>{event.service?.title||'Missing service'}</td><td>{event.images.length}</td><td><Status value={event.published?'published':'draft'}/></td><td><div className="table-actions"><Link className="icon-button" to={`/events/${event._id}`} target="_blank" aria-label={`View ${event.title}`}><Icon name="eye" size={18}/></Link><button className="icon-button" onClick={()=>startEditor(event)} aria-label={`Edit ${event.title}`}><Icon name="edit" size={18}/></button><button className="icon-button danger" disabled={busy===event._id} onClick={()=>remove(event)} aria-label={`Delete ${event.title}`}><Icon name="trash" size={18}/></button></div></td></tr>)}</tbody></table></div></TableState></div>{editing?<Editor initial={editing} services={services} onClose={()=>setEditing(null)} onSaved={event=>{setEditing(null);setMessage(`Saved ${event.title}. Album cover was verified.`);collection.reload();}}/>:null}</>;
 }

@@ -12,3 +12,8 @@ export function clearAlbumCoverIfRemoved(draft,image){
   const images=(draft.images||[]).filter(item=>item!==image);
   return draft.coverImage===image.url?{...draft,coverImage:'',coverAssetId:'',images}:{...draft,images};
 }
+
+export function coverWasPersisted(draft,event){
+  const expected=draft.coverImage||draft.images?.[0]?.url||'';
+  return event?.coverImage===expected&&event?.coverAssetId===(draft.coverAssetId||'');
+}

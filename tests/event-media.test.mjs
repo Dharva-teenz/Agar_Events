@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {appendAlbumPhoto,setAlbumCover} from '../client/src/admin/eventMedia.js';
+import {appendAlbumPhoto,coverWasPersisted,setAlbumCover} from '../client/src/admin/eventMedia.js';
 import {parseEvent} from '../shared/validation.js';
 import {publicEvent} from '../server/src/routes/public.js';
 
@@ -23,4 +23,6 @@ test('selecting a Cloudinary cover persists it through event validation and publ
  const publicRecord=publicEvent({...saved,_id:'event-1'},new Map([[serviceId,{slug:'catering',title:'Catering'}]]));
  assert.equal(publicRecord.coverImage,cloud);
  assert.equal(publicRecord.images[0].url,cloud);
+ assert.equal(coverWasPersisted(draft,publicRecord),true);
+ assert.equal(coverWasPersisted(draft,{...publicRecord,coverImage:legacy}),false);
 });

@@ -66,6 +66,11 @@ adminRouter.delete('/services/:id',async(req,res)=>{
   res.json({ok:true});
 });
 adminRouter.get('/events',async(req,res)=>res.json(await list(Event,req,{},'service')));
+adminRouter.get('/events/:id',async(req,res)=>{
+  const event=await Event.findById(id(req.params.id)).populate('service').lean();
+  if(!event)throw new InputError('Event not found.',404);
+  res.json(event);
+});
 adminRouter.post('/events',async(req,res)=>{const data=parseEvent(req.body);await existingService(data.service);res.status(201).json(await Event.create(data));});
 adminRouter.put('/events/:id',async(req,res)=>{const data=parseEvent(req.body);await existingService(data.service);res.json(await updated(Event,req.params.id,data));});
 adminRouter.delete('/events/:id',async(req,res)=>{const item=await Event.findByIdAndDelete(id(req.params.id));if(!item)throw new InputError('Event not found.',404);const assets=[{assetId:item.coverAssetId,url:item.coverImage},...(item.images||[])];await Promise.all(assets.map(asset=>removeUnusedMedia(asset.assetId,asset.url)));res.json({ok:true});});
