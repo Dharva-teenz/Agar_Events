@@ -11,6 +11,10 @@ async function activeService(serviceId){
   const service=await Service.findOne({_id:id(serviceId,'Service'),active:true}).lean();
   return service;
 }
+export function publicEvent(event,serviceMap){
+  const service=serviceMap.get(String(event.service));
+  return {...event,serviceSlug:service?.slug,serviceTitle:service?.title||event.serviceName};
+}
 publicRouter.get('/site',async(req,res)=>{
   const [settings,services,reviews,faqs]=await Promise.all([
     getSettings(),Service.find({active:true}).sort({sortOrder:1,title:1}).lean(),
@@ -21,7 +25,7 @@ publicRouter.get('/site',async(req,res)=>{
   if(!settings.showReferenceGallery)eventQuery.isDemo={$ne:true};
   const events=await Event.find(eventQuery).select('-seedKey').sort({featured:-1,createdAt:-1}).limit(200).lean();
   const serviceMap=new Map(services.map(s=>[String(s._id),s]));
-  res.json({settings,services,events:events.map(e=>({...e,serviceSlug:serviceMap.get(String(e.service))?.slug,serviceTitle:serviceMap.get(String(e.service))?.title||e.serviceName})),reviews:reviews.map(r=>({...r,serviceTitle:r.service?.title||r.serviceName||'Celebration',service:r.service?._id})),faqs,designMode:false});
+  res.json({settings,services,events:events.map(event=>publicEvent(event,serviceMap)),reviews:reviews.map(r=>({...r,serviceTitle:r.service?.title||r.serviceName||'Celebration',service:r.service?._id})),faqs,designMode:false});
 });
 export function getPublicFAQs(){
   return FAQ.find({active:true}).select('question answer sortOrder').sort({sortOrder:1,_id:1}).lean();
